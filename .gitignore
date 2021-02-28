@@ -1,2 +1,5 @@
 # pycharm
 .idea/
+
+# tests
+cprofile_test.py

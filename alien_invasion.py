@@ -4,8 +4,8 @@ import pygame as pg
 
 import settings
 from ship import Ship
-from alien import Alien, build_alien_fleet
-from visual_fx import Asteroid, FpsDisplay
+from alien import AlienFleet
+from visual_fx import AsteroidGroup, FpsDisplay
 
 
 class AlienInvasion:
@@ -38,12 +38,10 @@ class AlienInvasion:
         # initialize the player's ship
         self.ship = Ship(self)
         # make fleet of aliens
-        self.aliens = pg.sprite.Group()
-        build_alien_fleet(self)
+        self.alien_fleet = AlienFleet(self)
 
         # Make a group for asteroids
-        self.asteroids = pg.sprite.Group()
-        self.asteroids.add(Asteroid(self))
+        self.asteroids = AsteroidGroup(self, 3)
 
     def run_game(self):
         """Main loop for checking events and updating objects.
@@ -60,7 +58,7 @@ class AlienInvasion:
             if self.is_running or is_first_frame:
                 is_first_frame = False
                 self.asteroids.update(dt)
-                self.aliens.update(dt)
+                self.alien_fleet.update(dt)
                 self.ship.update(dt)
                 self.ship.bullets.update(dt)
                 self._bullet_alien_collide()
@@ -72,7 +70,7 @@ class AlienInvasion:
         Collide all the bullet sprites will all the alien sprites, remove the
         bullet and then blow up the alien
         """
-        collisions = pg.sprite.groupcollide(self.ship.bullets, self.aliens,
+        collisions = pg.sprite.groupcollide(self.ship.bullets, self.alien_fleet,
                                             False, False)
 
         for alien_list in collisions.values():
@@ -128,7 +126,7 @@ class AlienInvasion:
             bullet.draw_bullet()
         self.ship.blitme()
 
-        self.aliens.draw(self.screen)
+        self.alien_fleet.draw(self.screen)
 
         if self.vars.show_fps:
             self.fps_display.blitme()

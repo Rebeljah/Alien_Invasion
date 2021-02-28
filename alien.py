@@ -5,30 +5,39 @@ import random
 from settings import scale
 
 
-def build_alien_fleet(game):
-    """
-    Find the best spacing between each alien in the fleet based on a given
-    usable width and a given usable height. The fleet will be positioned
-    in a grid that roughly fills the given usable area.
-    """
-    usable_w = game.rect.width
-    usable_h = .55 * game.rect.height
-    columns: int = game.vars.fleet_columns
-    rows: int = game.vars.fleet_rows
+class AlienFleet(pg.sprite.Group):
+    """Class used to control the fleet of aliens on screen, inherits from Group"""
+    def __init__(self, game):
+        super().__init__()
+        """
+        Find the best spacing between each alien in the fleet based on a given
+        usable width and a given usable height. The fleet will be positioned
+        in a grid that roughly fills the given usable area.
+        """
+        # information used to space the fleet
+        usable_w = game.rect.width
+        usable_h = .55 * game.rect.height
+        columns: int = game.vars.fleet_columns
+        rows: int = game.vars.fleet_rows
+        # space between each alien's starting x, y)
+        hoz_spacing = usable_w / columns
+        vert_spacing = usable_h / rows
 
-    hoz_spacing = usable_w / columns
-    vert_spacing = usable_h / rows
+        # build the fleet
+        for row in range(rows):
+            # create a row of aliens
+            row_of_aliens = [Alien(game) for _ in range(columns)]
 
-    for row in range(rows):
-        # create a row of aliens
-        row_of_aliens = [Alien(game) for _ in range(columns)]
+            # move each alien in the row to it's correct x,y position
+            for column, alien in enumerate(row_of_aliens, start=0):
+                alien.x += column * hoz_spacing
+                alien.y += row * vert_spacing
+                print(alien.x, alien.y)
 
-        # move each alien in the row to it's correct x,y position
-        for column, alien in enumerate(row_of_aliens, start=0):
-            alien.x += column * hoz_spacing
-            alien.y += row * vert_spacing
+            self.add(*row_of_aliens)
 
-        game.aliens.add(*row_of_aliens)
+    def update_fleet(self, dt):
+        pass
 
 
 class Alien(Sprite):
@@ -50,7 +59,6 @@ class Alien(Sprite):
         # Used to keep accurate count of current location
         self.x = float(self.rect.x)
         self.y = float(self.rect.y)
-
         # velocity
         self.vel_x = self.game.vars.alien_vel_x
         self.drop_height = self.game.vars.fleet_drop_height
@@ -82,16 +90,44 @@ class Alien(Sprite):
 
     def _hit_bottom(self):
         """ Do a series of actions when the alien reaches the bottom"""
+        print('hit bottom', end=' ')
         self.blow_up()
 
     def _hit_player_ship(self):
         """ Do a series of actions when an alien hits the player"""
+        print('hit player', end=' ')
         self.blow_up()
 
     def blow_up(self):
         """Creates an effect before removing self from group"""
         print('ALIEN SHIP EXPLOSION!')
-        self.remove(self.game.aliens)
+        self.remove(self.game.alien_fleet)
 
     def blitme(self):
         self.game.screen.blit(self.image, self.rect)
+
+
+"""def build_alien_fleet(game):
+   \"""
+    Find the best spacing between each alien in the fleet based on a given
+    usable width and a given usable height. The fleet will be positioned
+    in a grid that roughly fills the given usable area.
+    \"""
+    usable_w = game.rect.width
+    usable_h = .55 * game.rect.height
+    columns: int = game.vars.fleet_columns
+    rows: int = game.vars.fleet_rows
+
+    hoz_spacing = usable_w / columns
+    vert_spacing = usable_h / rows
+
+    for row in range(rows):
+        # create a row of aliens
+        row_of_aliens = [Alien(game) for _ in range(columns)]
+
+        # move each alien in the row to it's correct x,y position
+        for column, alien in enumerate(row_of_aliens, start=0):
+            alien.x += column * hoz_spacing
+            alien.y += row * vert_spacing
+
+        game.aliens.add(*row_of_aliens)"""
