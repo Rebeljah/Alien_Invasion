@@ -6,7 +6,7 @@ class Vars:
     def __init__(self):
         """initialize the game's settings"""
 
-        # get user display size
+        # get user's display size
         self.display_info = pg.display.Info()
         display_w = self.display_info.current_w
         display_h = self.display_info.current_h
@@ -14,7 +14,7 @@ class Vars:
         # screen settings
         self.max_fps = 144
         self.window_w = int(.75 * display_w)
-        self.window_h = int(.9 * display_h)
+        self.window_h = int(.90 * display_h)
 
         # FPS display
         self.show_fps = True
@@ -29,18 +29,18 @@ class Vars:
         self.key_quit = pg.K_q
 
         # Alien settings
-        self.fleet_columns = 6
-        self.fleet_rows = 4
+        self.fleet_columns = 7
+        self.fleet_rows = 8
         self.alien_scale = .060  # percent of screen height
-        self.alien_vel_x = 0.15 * self.window_w
-        self.fleet_drop_height = 0.13 * self.window_h
+        self.alien_vel_x = 0.19 * self.window_w
+        self.fleet_drop_height = 0.07 * self.window_h
 
         # ship settings
-        self.ship_scale = 0.10
-        self.ship_speed = 0.75 * self.window_w  # pixels-per-second
+        self.ship_scale = 0.11
+        self.ship_speed = 0.65 * self.window_w  # pixels-per-second
 
         # bullet settings
-        self.bullet_speed = 1.0 * self.window_h  # pixels-per-second
+        self.bullet_speed = 0.90 * self.window_h  # pixels-per-second
         self.max_bullets = 3
         self.bullets_persist = False
         self.bullet_w = 0.003 * self.window_w
@@ -48,9 +48,10 @@ class Vars:
         self.bullet_color = (51, 204, 255)  # light blue
 
         # asteroid settings
+        self.num_asteroids = 3
         self.asteroid_scale = 0.14
         self.asteroid_rps = 45  # degrees-per-second
-        self.asteroid_velocity = 0.05 * self.window_w  # pixels-per-second
+        self.asteroid_velocity = .08 * self.window_w  # pixels-per-second
 
 
 def scale(child_surface, comparison_surface, ratio):

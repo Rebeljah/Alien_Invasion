@@ -24,7 +24,6 @@ class AlienInvasion:
         )
         self.rect = self.screen.get_rect()
 
-        # set window icon and title
         pg.display.set_caption("Space Knockoffs!")
         pg.display.set_icon(pg.image.load('images/asteroid.bmp'))
 
@@ -32,16 +31,10 @@ class AlienInvasion:
         bg_surface = pg.image.load('images/bg.bmp').convert()
         self.bg = pg.transform.scale(bg_surface, self.rect.size)
 
-        # Initialize an FPS display
         self.fps_display = FpsDisplay(self)
-
-        # initialize the player's ship
         self.ship = Ship(self)
-        # make fleet of aliens
         self.alien_fleet = AlienFleet(self)
-
-        # Make a group for asteroids
-        self.asteroids = AsteroidGroup(self, 3)
+        self.asteroids = AsteroidGroup(self, self.vars.num_asteroids)
 
     def run_game(self):
         """Main loop for checking events and updating objects.
@@ -50,11 +43,14 @@ class AlienInvasion:
         while True:
             # tick game clock, set max frame rate, get delta time in seconds
             dt = self.clock.tick(self.vars.max_fps) / 1000.0
+            # limit dt to prevent items from teleporting on loss of frames
+            if dt > 0.2:
+                dt = 0.2
+
             if self.vars.show_fps:
                 self.fps_display.update()
 
             self._check_events()
-
             if self.is_running or is_first_frame:
                 is_first_frame = False
                 self.asteroids.update(dt)
@@ -64,22 +60,6 @@ class AlienInvasion:
                 self._bullet_alien_collide()
 
             self._update_screen()
-
-    def _bullet_alien_collide(self):
-        """
-        Collide all the bullet sprites will all the alien sprites, remove the
-        bullet and then blow up the alien
-        """
-        collisions = pg.sprite.groupcollide(self.ship.bullets, self.alien_fleet,
-                                            False, False)
-
-        for alien_list in collisions.values():
-            for alien in alien_list:
-                alien.blow_up()
-
-        if not self.vars.bullets_persist:
-            for bullet in collisions.keys():
-                bullet.remove_self()
 
     def _check_events(self):
         """Listen for events from the event queue"""
@@ -113,23 +93,36 @@ class AlienInvasion:
             elif event.key == self.vars.key_l:
                 self.ship.moving_left = False
 
+    def _bullet_alien_collide(self):
+        """
+        Collide all the bullet sprites will all the alien sprites, remove the
+        bullet and then blow up the alien
+        """
+        collisions = pg.sprite.groupcollide(self.ship.bullets, self.alien_fleet,
+                                            False, False)
+        for alien_list in collisions.values():
+            for alien in alien_list:
+                alien.blow_up()
+
+        if not self.vars.bullets_persist:
+            for bullet in collisions.keys():
+                bullet.remove_self()
+
     def _update_screen(self):
         """redraw the screen after each loop"""
 
         self.screen.blit(self.bg, (0, 0))
 
-        """for asteroid in self.asteroids:
-            asteroid.draw_self_rect()"""
         self.asteroids.draw(self.screen)
 
         for bullet in self.ship.bullets:
             bullet.draw_bullet()
-        self.ship.blitme()
+        self.ship.blit_self()
 
         self.alien_fleet.draw(self.screen)
 
         if self.vars.show_fps:
-            self.fps_display.blitme()
+            self.fps_display.blit_self()
 
         pg.display.flip()
 

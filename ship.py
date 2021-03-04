@@ -29,6 +29,7 @@ class Ship(Sprite):
 
         self.x = float(self.rect.x)
         # movement flags
+        self.velocity = self.vars.ship_speed
         self.moving_right = False
         self.moving_left = False
 
@@ -40,7 +41,7 @@ class Ship(Sprite):
         """
 
         # pixels per second * delta time in seconds
-        move_distance = self.vars.ship_speed * dt
+        move_distance = self.velocity * dt
 
         if self.moving_right and self.rect.right < self.game.rect.right:
             self.x += move_distance
@@ -54,6 +55,6 @@ class Ship(Sprite):
         if len(self.bullets) < self.vars.max_bullets:
             self.bullets.add(Bullet(self.game))
 
-    def blitme(self):
+    def blit_self(self):
         """blit the ship to the screen at its current position"""
         self.game.screen.blit(self.image, self.rect)
