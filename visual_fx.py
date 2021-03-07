@@ -106,15 +106,14 @@ class Asteroid(Sprite):
 
     def _randomize_asteroid(self):
         """Randomly change the asteroid's velocity and rotation."""
-        def randomize(vel, amplitude=1.2):
-            return vel * rand.choice([1, -1]) * rand.uniform(.5, 2) * amplitude
+        def randomize(vel):
+            return vel * rand.choice([1, -1]) * rand.uniform(.5, 2)
 
         self.vel_x = randomize(self.base_vel)
         self.vel_y = randomize(self.base_vel)
-        # randomize the direction / speed of rotation
         self.rotation_vel = randomize(self.base_rotation_vel)
         # randomize rotozoom scale
-        self.scale = rand.uniform(.25, 1.25)
+        self.scale = rand.uniform(.25, 1.5)
 
     def _teleport_asteroid(self):
         """
@@ -135,7 +134,7 @@ class Asteroid(Sprite):
         elif self.rect.left > self.game.rect.right and self.vel_x > 0:
             self.vel_x *= -1
 
-    def _random_location(self, travel_time=2):
+    def _random_location(self, travel_time=1.5):
         """
         Returns a random coordinate position outside of the visible
         screen.
@@ -152,38 +151,3 @@ class Asteroid(Sprite):
              (-dist, g_rect.centery), (-dist, g_rect.h+dist),
              (g_rect.centerx, g_rect.h+dist), (g_rect.w+dist, g_rect.h+dist))
         )
-
-
-class FpsDisplay:
-    """Class to represent a dynamic FPS counter that can be blitted to the
-    screen"""
-    def __init__(self, game):
-        self.game = game
-
-        self.font = pg.font.Font(game.vars.fps_font, game.vars.fps_size)
-        self.color = (5, 255, 30)
-
-        self.image, self.rect = self._get_font_surface()
-        # used for self frame-rate limiting
-        self.target_fps = game.vars.fps_refresh_rate  # FPS
-        self.target_idle = 1000 / self.target_fps  # time is MS to wait
-        self.idle_time = 0
-
-    def update(self):
-        """Update the Surface with the current FPS"""
-        if self.idle_time < self.target_idle:  # milliseconds
-            self.idle_time += self.game.clock.get_time()
-        else:
-            self.image, self.rect = self._get_font_surface()
-            self.idle_time = 0
-
-    def _get_font_surface(self):
-        current_fps = self.game.clock.get_fps()
-        font_surface = self.font.render(
-            f"FPS  {int(current_fps)}", True, self.color
-        )
-        rect = font_surface.get_rect()
-        return font_surface, rect
-
-    def blit_self(self):
-        self.game.screen.blit(self.image, self.rect)

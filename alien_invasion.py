@@ -5,7 +5,8 @@ import pygame as pg
 import settings
 from ship import Ship
 from alien import AlienFleet
-from visual_fx import AsteroidGroup, FpsDisplay
+from visual_fx import AsteroidGroup
+from user_interface import Scoreboard, FpsDisplay
 
 
 class AlienInvasion:
@@ -31,6 +32,7 @@ class AlienInvasion:
         bg_surface = pg.image.load('images/bg.bmp').convert()
         self.bg = pg.transform.scale(bg_surface, self.rect.size)
 
+        self.scoreboard = Scoreboard(self)
         self.fps_display = FpsDisplay(self)
         self.ship = Ship(self)
         self.alien_fleet = AlienFleet(self)
@@ -51,6 +53,8 @@ class AlienInvasion:
                 self.fps_display.update()
 
             self._check_events()
+
+            # update in-game elements
             if self.is_running or is_first_frame:
                 is_first_frame = False
                 self.asteroids.update(dt)
@@ -58,15 +62,21 @@ class AlienInvasion:
                 self.ship.update(dt)
                 self.ship.bullets.update(dt)
                 self._bullet_alien_collide()
+                self.scoreboard.update()
 
             self._update_screen()
+
+    def _quit_game(self):
+        """save data as needed and close the game"""
+        self.scoreboard.leaderboard.update_leaderboard()
+        sys.exit()
 
     def _check_events(self):
         """Listen for events from the event queue"""
 
         for event in pg.event.get():
             if event.type == pg.QUIT:
-                sys.exit()
+                self._quit_game()
             elif event.type == pg.KEYDOWN:
                 self._check_keydown_event(event)
             elif event.type == pg.KEYUP:
@@ -75,7 +85,7 @@ class AlienInvasion:
     def _check_keydown_event(self, event):
         """respond to key presses"""
         if event.key == self.vars.key_quit:
-            sys.exit()
+            self._quit_game()
 
         if self.is_running:
             if event.key == self.vars.key_r:
@@ -102,6 +112,7 @@ class AlienInvasion:
                                             False, False)
         for alien_list in collisions.values():
             for alien in alien_list:
+                self.scoreboard.player_score += 1
                 alien.blow_up()
 
         if not self.vars.bullets_persist:
@@ -113,6 +124,9 @@ class AlienInvasion:
 
         self.screen.blit(self.bg, (0, 0))
 
+        if self.vars.show_fps:
+            self.fps_display.blit_self()
+
         self.asteroids.draw(self.screen)
 
         for bullet in self.ship.bullets:
@@ -121,8 +135,7 @@ class AlienInvasion:
 
         self.alien_fleet.draw(self.screen)
 
-        if self.vars.show_fps:
-            self.fps_display.blit_self()
+        self.scoreboard.blit_self()
 
         pg.display.flip()
 

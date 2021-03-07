@@ -22,6 +22,10 @@ class Vars:
         self.fps_font = 'fonts/arcade.ttf'
         self.fps_size = 22
 
+        # Scoreboard
+        self.scoreboard_font_rgba = (255, 255, 0, 100)  # yellow
+        self.scoreboard_rgba = (0, 255, 0, 50)  # green
+
         # control settings
         self.key_r = pg.K_d
         self.key_l = pg.K_a
@@ -29,22 +33,22 @@ class Vars:
         self.key_quit = pg.K_q
 
         # Alien settings
-        self.fleet_columns = 7
+        self.fleet_columns = 8
         self.fleet_rows = 8
         self.alien_scale = .060  # percent of screen height
-        self.alien_vel_x = 0.19 * self.window_w
-        self.fleet_drop_height = 0.07 * self.window_h
+        self.alien_vel_x = 0.21 * self.window_w
+        self.fleet_drop_height = 0.05 * self.window_h
 
         # ship settings
         self.ship_scale = 0.11
-        self.ship_speed = 0.65 * self.window_w  # pixels-per-second
+        self.ship_speed = 0.45 * self.window_w  # pixels-per-second
 
         # bullet settings
-        self.bullet_speed = 0.90 * self.window_h  # pixels-per-second
+        self.bullet_speed = 0.80 * self.window_h  # pixels-per-second
         self.max_bullets = 3
-        self.bullets_persist = False
-        self.bullet_w = 0.003 * self.window_w
-        self.bullet_h = 0.03 * self.window_h
+        self.bullets_persist = True
+        self.bullet_w = 0.09 * self.window_w  # 0.003 * self.window_w
+        self.bullet_h = 0.028 * self.window_h
         self.bullet_color = (51, 204, 255)  # light blue
 
         # asteroid settings
