@@ -1,107 +1,128 @@
-import sys
 import pygame as pg
-# import random as r
+import sys
 
 import settings
+from menu import MenuManager
+from overlays import Scoreboard, FpsDisplay
+from visual_fx import AsteroidGroup
 from ship import Ship
 from alien import AlienFleet
-from visual_fx import AsteroidGroup
-from user_interface import Scoreboard, FpsDisplay
 
 
 class AlienInvasion:
-    """overall class to manage game assets and behavior"""
+    """overall class to manage game assets and behavior, thanks to Python Crash
+    Course for the wonderful explanation of the main game loop and event
+    handling"""
 
     def __init__(self):
         """initialize the game, and create game resources"""
         pg.init()
         self.vars = settings.Vars()
         self.clock = pg.time.Clock()
-        self.is_running = True
+        self.dt = 0
+        self.state = 'game'  # 'menu'
+        self.first_frame = True
 
         # create the screen and get its rect
         self.screen = pg.display.set_mode(
-            (self.vars.window_w, self.vars.window_h)
+            (self.vars.window_w, self.vars.window_h),
+            flags=pg.HWSURFACE
         )
         self.rect = self.screen.get_rect()
 
         pg.display.set_caption("Space Knockoffs!")
-        pg.display.set_icon(pg.image.load('images/asteroid.bmp'))
 
         # set the background
         bg_surface = pg.image.load('images/bg.bmp').convert()
         self.bg = pg.transform.scale(bg_surface, self.rect.size)
-
+        # Initialize objects
+        self.menu = MenuManager(self)
         self.scoreboard = Scoreboard(self)
         self.fps_display = FpsDisplay(self)
         self.ship = Ship(self)
         self.alien_fleet = AlienFleet(self)
-        self.asteroids = AsteroidGroup(self, self.vars.num_asteroids)
+        self.asteroids = AsteroidGroup(self)
 
     def run_game(self):
         """Main loop for checking events and updating objects.
         once everything is updated, the _update_screen method is called."""
-        is_first_frame = True
+
         while True:
             # tick game clock, set max frame rate, get delta time in seconds
-            dt = self.clock.tick(self.vars.max_fps) / 1000.0
-            # limit dt to prevent items from teleporting on loss of frames
-            if dt > 0.2:
-                dt = 0.2
+            self.dt = self.clock.tick(self.vars.max_fps) / 1000.0
+            if self.dt > 0.10:
+                self.dt = 0.10
 
-            if self.vars.show_fps:
-                self.fps_display.update()
+            if self.state == 'game' or self.first_frame:
+                self.first_frame = False
+                self._check_game_events()
+                self._update_game(self.dt)
 
-            self._check_events()
+            elif self.state == 'menu':
+                self.menu.check_menu_events()
+                self.menu.update_menu()
 
-            # update in-game elements
-            if self.is_running or is_first_frame:
-                is_first_frame = False
-                self.asteroids.update(dt)
-                self.alien_fleet.update(dt)
-                self.ship.update(dt)
-                self.ship.bullets.update(dt)
-                self._bullet_alien_collide()
-                self.scoreboard.update()
+            # the game will always be drawn. This permits the use
+            # of a transparent menu background
+            self._draw_game()
+            if self.state == 'menu':
+                self.menu.draw_menu()
 
-            self._update_screen()
-
-    def _quit_game(self):
-        """save data as needed and close the game"""
-        self.scoreboard.leaderboard.update_leaderboard()
-        sys.exit()
-
-    def _check_events(self):
-        """Listen for events from the event queue"""
-
+    def _check_game_events(self):
         for event in pg.event.get():
             if event.type == pg.QUIT:
-                self._quit_game()
+                self.quit_game()
             elif event.type == pg.KEYDOWN:
-                self._check_keydown_event(event)
+                if event.key == self.vars.key_quit:
+                    self.quit_game()
+                elif event.key == self.vars.key_move_l:
+                    self.ship.moving_left = True
+                elif event.key == self.vars.key_move_r:
+                    self.ship.moving_right = True
+                elif event.key == self.vars.key_shoot:
+                    self.ship.fire_bullet()
             elif event.type == pg.KEYUP:
-                self._check_keyup_event(event)
+                if event.key == self.vars.key_move_l:
+                    self.ship.moving_left = False
+                elif event.key == self.vars.key_move_r:
+                    self.ship.moving_right = False
 
-    def _check_keydown_event(self, event):
-        """respond to key presses"""
-        if event.key == self.vars.key_quit:
-            self._quit_game()
+    def _update_game(self, dt):
+        # FX
+        self.asteroids.update(dt)
+        # Alien fleet
+        self.alien_fleet.update(dt)
+        # Player ship
+        self.ship.update(dt)
+        self.ship.bullets.update(dt)
+        self._bullet_alien_collide()
+        # Overlays
+        self.scoreboard.update()
+        if self.vars.show_fps:
+            self.fps_display.update()
 
-        if self.is_running:
-            if event.key == self.vars.key_r:
-                self.ship.moving_right = True
-            elif event.key == self.vars.key_l:
-                self.ship.moving_left = True
-            elif event.key == self.vars.key_shoot:
-                self.ship.fire_bullet()
+    def _draw_game(self):
+        """Blit surfaces onto the game screen and then update the display"""
 
-    def _check_keyup_event(self, event):
-        """respond to key releases"""
-        if self.is_running:
-            if event.key == self.vars.key_r:
-                self.ship.moving_right = False
-            elif event.key == self.vars.key_l:
-                self.ship.moving_left = False
+        self.screen.blit(self.bg, (0, 0))
+
+        # FX
+        self.asteroids.draw(self.screen)
+
+        # Player ship
+        for bullet in self.ship.bullets:
+            bullet.draw_bullet()
+        self.ship.blit_self()
+
+        # Alien fleet
+        self.alien_fleet.draw(self.screen)
+
+        # Overlays
+        self.scoreboard.blit_self()
+        if self.vars.show_fps:
+            self.fps_display.blit_self()
+
+        pg.display.flip()
 
     def _bullet_alien_collide(self):
         """
@@ -112,32 +133,17 @@ class AlienInvasion:
                                             False, False)
         for alien_list in collisions.values():
             for alien in alien_list:
-                self.scoreboard.player_score += 1
+                self.scoreboard.player_score += alien.point_value
                 alien.blow_up()
 
         if not self.vars.bullets_persist:
             for bullet in collisions.keys():
                 bullet.remove_self()
 
-    def _update_screen(self):
-        """redraw the screen after each loop"""
-
-        self.screen.blit(self.bg, (0, 0))
-
-        if self.vars.show_fps:
-            self.fps_display.blit_self()
-
-        self.asteroids.draw(self.screen)
-
-        for bullet in self.ship.bullets:
-            bullet.draw_bullet()
-        self.ship.blit_self()
-
-        self.alien_fleet.draw(self.screen)
-
-        self.scoreboard.blit_self()
-
-        pg.display.flip()
+    def quit_game(self):
+        """save data as needed and close the game"""
+        self.scoreboard.leaderboard.update_leaderboard()
+        sys.exit()
 
 
 if __name__ == '__main__':

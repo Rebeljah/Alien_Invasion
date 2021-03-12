@@ -17,27 +17,39 @@ class AlienFleet(pg.sprite.Group):
         self.game = game
 
         # information used to space the fleet
-        self.usable_w = game.rect.width
-        self.usable_h = .55 * game.rect.height
+        usable_w = game.rect.width
+        usable_h = .55 * game.rect.height
         self.num_columns = game.vars.fleet_columns
         self.num_rows = game.vars.fleet_rows
         # space between each alien's starting x, y)
-        self.hoz_spacing = self.usable_w / self.num_columns
-        self.vert_spacing = self.usable_h / self.num_rows
+        self.hoz_spacing = usable_w / self.num_columns
+        self.vert_spacing = usable_h / self.num_rows
 
         # load possible ship surfaces
-        fp = os.path.join('images/', 'alien_ships/')
-        self.ship_images = [pg.image.load(fp+fn) for fn in os.listdir(fp)]
+        self.image_pool = []
+        self.image_folder = os.path.join('images/', 'alien_ships/')
+        self._load_image_pool()
 
-        # use the preceding information to build an evenly spaced fleet
         self._build_new_fleet()
 
+    def _load_image_pool(self):
+        """
+        Load each image from the alien ship image folder into the group's
+        image pool list so that each image can be randomly assigned to new
+        Alien instances being put into the fleet.
+        """
+        self.image_pool = [
+            pg.image.load(self.image_folder + file_name).convert_alpha()
+            for file_name in os.listdir(self.image_folder)
+        ]
+
     def _build_new_fleet(self):
-        """Create an evenly spaced 'fleet' of alien objects by multiplying
+        """
+        Create an evenly spaced 'fleet' of alien objects by multiplying
         the aliens row/column position by a pre-determiend vertical and
         horizontal spacing
         """
-        def random_image(): return random.choice(self.ship_images)
+        def random_image(): return random.choice(self.image_pool)
 
         for row in range(self.num_rows):
             row_of_aliens = [
@@ -76,6 +88,8 @@ class AlienFleet(pg.sprite.Group):
             self.image, self.rect = scale(image, self.game.screen,
                                           self.game.vars.alien_scale)
 
+            self.point_value = 10
+
             # Used to keep accurate count of current pixel location
             self.x = self.y = 0.0
             # velocity
@@ -88,28 +102,35 @@ class AlienFleet(pg.sprite.Group):
             move down one level.
             -Aliens that hit the player or the floor both have different behaviors.
             """
+            rect = self.rect
+            g_rect = self.game.rect
+
             # move on the x-axis
             self.x += self.vel_x * dt
 
-            # reverse and move down on wall collision
+            # player collision
+            if self.rect.colliderect(self.game.ship.rect):
+                self._hit_player_ship()
+            # floor collision
+            if rect.bottom > g_rect.bottom:
+                self._hit_bottom()
+            
+            # screen edge collisions
             def moving_left(): return self.vel_x < 0
             def moving_right(): return self.vel_x > 0
-            def colliding_left(): return self.rect.left < 0
-            def colliding_right(): return self.rect.right > self.game.rect.w
-
-            if (colliding_left() and moving_left() or
-                    colliding_right() and moving_right()):
+            def colliding_left(): return rect.left < 0
+            def colliding_right(): return rect.right > g_rect.w
+            # reverse and move down on wall collision
+            if colliding_left() and moving_left():
+                rect.left = g_rect.left
+                self.vel_x *= -1
+                self.y += self.drop_height
+            elif colliding_right() and moving_right():
+                rect.right = g_rect.right
                 self.vel_x *= -1
                 self.y += self.drop_height
 
-            self.rect.topleft = (self.x, self.y)
-
-            # check if has alien has hit the floor
-            if self.rect.bottom >= self.game.rect.bottom:
-                self._hit_bottom()
-            # check if alien has hit the player
-            elif self.rect.colliderect(self.game.ship.rect):
-                self._hit_player_ship()
+            rect.topleft = (self.x, self.y)
 
         def _hit_bottom(self):
             """ Do a series of actions when the alien reaches the bottom"""

@@ -7,7 +7,8 @@ from bullet import Bullet
 
 
 class Ship(Sprite):
-    """A class to manage the player's ship"""
+    """A class to manage the player's ship. This class relies heavily on the
+    great code found in Python Crash Course"""
 
     def __init__(self, game):
         super().__init__()

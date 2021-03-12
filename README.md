@@ -1,1 +1,3 @@
-Thanks to Python Crash Course 2nd Ed by Eric Matthes for getting this project up and running in no time. I have to credit the book with a lot of the code for the ship / bullets as well as giving a great intro to the structure of pygame code.
+My own initiation into game design via a rip-off of Space Invaders! I am using this as a learning experience for OOP, as this is my first project that implements an object oriented design. Thanks to Python Crash Course 2nd Ed by Eric Matthes for getting this project up and running in no time. I have to credit the book with a lot of the code for the ship / bullets as well as giving a great intro to the structure of pygame code.
+I have denoted any sections of code that came from the book. The files that contain code from Python Crash Course are:
+alien_invasion.py, bullet.py, settings.py, ship.py.

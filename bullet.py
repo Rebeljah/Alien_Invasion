@@ -4,7 +4,8 @@ from pygame.sprite import Sprite
 
 
 class Bullet(Sprite):
-    """A class that represents a travelling bullet"""
+    """A class that represents a travelling bullet. This class uses code
+    from Python Crash Course"""
 
     def __init__(self, game):
         """Create a bullet object at the ship's current position"""
