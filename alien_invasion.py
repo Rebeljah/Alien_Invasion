@@ -11,8 +11,7 @@ from alien import AlienFleet
 
 class AlienInvasion:
     """overall class to manage game assets and behavior, thanks to Python Crash
-    Course for the wonderful explanation of the main game loop and event
-    handling"""
+    Course for the wonderful explanation of the main game loop"""
 
     def __init__(self):
         """initialize the game, and create game resources"""
@@ -20,7 +19,7 @@ class AlienInvasion:
         self.vars = settings.Vars()
         self.clock = pg.time.Clock()
         self.dt = 0
-        self.state = 'game'  # 'menu'
+        self.state = 'menu'  # 'game'
         self.first_frame = True
 
         # create the screen and get its rect
@@ -36,6 +35,7 @@ class AlienInvasion:
         bg_surface = pg.image.load('images/bg.bmp').convert()
         self.bg = pg.transform.scale(bg_surface, self.rect.size)
         # Initialize objects
+        self.input_manager = InputManager(self)
         self.menu = MenuManager(self)
         self.scoreboard = Scoreboard(self)
         self.fps_display = FpsDisplay(self)
@@ -53,13 +53,13 @@ class AlienInvasion:
             if self.dt > 0.10:
                 self.dt = 0.10
 
+            self.input_manager.check_events()
+
             if self.state == 'game' or self.first_frame:
                 self.first_frame = False
-                self._check_game_events()
                 self._update_game(self.dt)
 
             elif self.state == 'menu':
-                self.menu.check_menu_events()
                 self.menu.update_menu()
 
             # the game will always be drawn. This permits the use
@@ -68,26 +68,13 @@ class AlienInvasion:
             if self.state == 'menu':
                 self.menu.draw_menu()
 
-    def _check_game_events(self):
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                self.quit_game()
-            elif event.type == pg.KEYDOWN:
-                if event.key == self.vars.key_quit:
-                    self.quit_game()
-                elif event.key == self.vars.key_move_l:
-                    self.ship.moving_left = True
-                elif event.key == self.vars.key_move_r:
-                    self.ship.moving_right = True
-                elif event.key == self.vars.key_shoot:
-                    self.ship.fire_bullet()
-            elif event.type == pg.KEYUP:
-                if event.key == self.vars.key_move_l:
-                    self.ship.moving_left = False
-                elif event.key == self.vars.key_move_r:
-                    self.ship.moving_right = False
+            pg.display.flip()
 
     def _update_game(self, dt):
+        """
+        Updates the objects that are active while the game is playing. These
+        objects all stop updating when the menu is open
+        """
         # FX
         self.asteroids.update(dt)
         # Alien fleet
@@ -102,7 +89,10 @@ class AlienInvasion:
             self.fps_display.update()
 
     def _draw_game(self):
-        """Blit surfaces onto the game screen and then update the display"""
+        """
+        blit game surfaces onto the screen. These are always blitted. If the
+        menu is open, the game elements will be blitted underneath of the menu.
+        """
 
         self.screen.blit(self.bg, (0, 0))
 
@@ -122,8 +112,6 @@ class AlienInvasion:
         if self.vars.show_fps:
             self.fps_display.blit_self()
 
-        pg.display.flip()
-
     def _bullet_alien_collide(self):
         """
         Collide all the bullet sprites will all the alien sprites, remove the
@@ -140,10 +128,73 @@ class AlienInvasion:
             for bullet in collisions.keys():
                 bullet.remove_self()
 
+    def toggle_menu(self):
+        """Switch state to 'menu' if in 'game' and visa versa"""
+        self.state = 'game' if self.state == 'menu' else 'menu'
+
     def quit_game(self):
         """save data as needed and close the game"""
         self.scoreboard.leaderboard.update_leaderboard()
         sys.exit()
+
+
+class InputManager:
+    def __init__(self, game):
+        self.game = game
+        self.vars = game.vars
+
+        # these are updated while the game is in the menu state
+        self.mouse_pos = 0, 0
+        self.is_clicking = False
+
+    def check_events(self):
+        """
+        First determine if the user has quit the game, then check events
+        for the game or menu depending on the current game state
+        """
+        for event in pg.event.get():
+
+            # check for user quit via the x button
+            if event.type == pg.QUIT:
+                self.game.quit_game()
+            # check for user quit or menu toggle
+            elif event.type == pg.KEYDOWN:
+                if event.key == self.vars.key_quit:
+                    self.game.quit_game()
+                elif event.key == self.vars.key_menu:
+                    self.game.toggle_menu()
+
+            # update the mouse
+            self.mouse_pos = pg.mouse.get_pos()
+            if event.type == pg.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    self.is_clicking = True
+
+            elif event.type == pg.MOUSEBUTTONUP:
+                if event.button == 1:
+                    self.is_clicking = False
+
+            # check game events if in game
+            if self.game.state == 'game':
+                self._check_game_events(event)
+
+    def _check_game_events(self, event):
+        """Handle events that occur while the game in playing"""
+        if event.type == pg.KEYDOWN:
+            # ship controls
+            if event.key == self.vars.key_move_l:
+                self.game.ship.moving_left = True
+            elif event.key == self.vars.key_move_r:
+                self.game.ship.moving_right = True
+            elif event.key == self.vars.key_shoot:
+                self.game.ship.fire_bullet()
+
+        elif event.type == pg.KEYUP:
+            # ship controls
+            if event.key == self.vars.key_move_l:
+                self.game.ship.moving_left = False
+            elif event.key == self.vars.key_move_r:
+                self.game.ship.moving_right = False
 
 
 if __name__ == '__main__':

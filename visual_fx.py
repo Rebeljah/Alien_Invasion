@@ -133,7 +133,9 @@ class Asteroid(Sprite):
             self.degree = 0
             self._randomize_asteroid()
             self._teleport_asteroid()
-            self._adjust_brightness()
+
+            # todo
+            # self._adjust_brightness()
 
     def _randomize_asteroid(self):
         """Randomly change the asteroid's velocity and rotation and image"""

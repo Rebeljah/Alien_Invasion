@@ -1,6 +1,8 @@
 """A module to hold the settings for the Alien Invasion game"""
 import pygame as pg
 from pygame.color import Color
+from pygame.font import Font
+from os.path import join
 
 
 class Vars:
@@ -9,9 +11,9 @@ class Vars:
         comes from Python Crash Course"""
 
         # Get user's display size
-        self.display_info = pg.display.Info()
-        display_w = self.display_info.current_w
-        display_h = self.display_info.current_h
+        display_info = pg.display.Info()
+        display_w = display_info.current_w
+        display_h = display_info.current_h
 
         # Screen settings
         self.max_fps = 144
@@ -19,31 +21,23 @@ class Vars:
         self.window_h = int(.90 * display_h)
 
         # Universal color settings
+        self.black_rgb = 0, 0, 0
+        self.grey_rgb = 89, 89, 89
         self.yellow_rgb = 255, 255, 0
         self.green_rgb = 0, 255, 0
+        self.light_blue_rgb = 51, 204, 255
 
-        # FPS display
-        self.show_fps = True
-        self.fps_refresh_rate = 3  # measured in... FPS
-        self.fps_font = 'fonts/arcade.ttf'
-        self.fps_size = 22
-
-        # Scoreboard
-        self.scoreboard_font_rgba = Color(*self.yellow_rgb, 100)
-        self.scoreboard_rgba = Color(*self.green_rgb, 50)
+        # Menu Settings
+        self.menu_bg_rgb = self.black_rgb
+        self.menu_font = Font(join('fonts/', 'arcade.ttf'), 35)
+        self.menu_font_rgb = self.black_rgb
 
         # Control settings
         self.key_move_r = pg.K_d
         self.key_move_l = pg.K_a
         self.key_shoot = pg.K_SPACE
         self.key_quit = pg.K_q
-
-        # Alien settings
-        self.fleet_columns = 5
-        self.fleet_rows = 2
-        self.alien_scale = .060  # percent of screen height
-        self.alien_vel_x = 0.21 * self.window_w
-        self.fleet_drop_height = 0.05 * self.window_h
+        self.key_menu = pg.K_ESCAPE
 
         # Ship settings
         self.ship_scale = 0.11
@@ -55,7 +49,24 @@ class Vars:
         self.bullets_persist = True
         self.bullet_w = 0.09 * self.window_w  # 0.003 * self.window_w
         self.bullet_h = 0.028 * self.window_h
-        self.bullet_color = (51, 204, 255)  # light blue
+        self.bullet_color = self.light_blue_rgb
+
+        # Alien settings
+        self.fleet_columns = 5
+        self.fleet_rows = 2
+        self.alien_scale = .060  # percent of screen height
+        self.alien_vel_x = 0.21 * self.window_w
+        self.fleet_drop_height = 0.05 * self.window_h
+
+        # FPS display
+        self.show_fps = True
+        self.fps_refresh_rate = 3  # measured in... FPS
+        self.fps_font = Font(join('fonts/', 'arcade.ttf'), 22)
+        self.fps_font_rgb = self.yellow_rgb
+
+        # Scoreboard
+        self.scoreboard_font_rgba = Color(*self.yellow_rgb, 100)
+        self.scoreboard_rgba = Color(*self.green_rgb, 50)
 
         # Asteroid settings
         self.num_asteroids = 2

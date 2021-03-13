@@ -105,8 +105,8 @@ class FpsDisplay:
         self.game = game
 
         # style
-        self.font = pg.font.Font(game.vars.fps_font, game.vars.fps_size)
-        self.color_rgb = self.game.vars.yellow_rgb
+        self.font = self.game.vars.fps_font
+        self.font_rgb = self.game.vars.fps_font_rgb
 
         self.image, self.rect = self._get_font_surface()
         # used for self frame-rate limiting
@@ -128,7 +128,7 @@ class FpsDisplay:
     def _get_font_surface(self):
         current_fps = self.game.clock.get_fps()
         font_surface = self.font.render(
-            f"FPS  {int(current_fps)}", True, self.color_rgb
+            f"FPS  {int(current_fps)}", True, self.font_rgb
         ).convert_alpha()
         rect = font_surface.get_rect()
         return font_surface, rect
