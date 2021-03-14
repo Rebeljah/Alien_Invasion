@@ -19,6 +19,7 @@ class AlienInvasion:
         self.vars = settings.Vars()
         self.clock = pg.time.Clock()
         self.dt = 0
+        self.debug = False
         self.state = 'menu'  # 'game'
         self.first_frame = True
 
@@ -62,11 +63,7 @@ class AlienInvasion:
             elif self.state == 'menu':
                 self.menu.update_menu()
 
-            # the game will always be drawn. This permits the use
-            # of a transparent menu background
-            self._draw_game()
-            if self.state == 'menu':
-                self.menu.draw_menu()
+            self._draw_screen()
 
             pg.display.flip()
 
@@ -85,8 +82,21 @@ class AlienInvasion:
         self._bullet_alien_collide()
         # Overlays
         self.scoreboard.update()
+
+    def _draw_screen(self):
+        """
+        Handle drawing of all objects to the screen. The menu is only drawn
+        if in menu mode
+        """
+
+        self._draw_game()
+
+        if self.state == 'menu':
+            self.menu.draw_menu()
+
         if self.vars.show_fps:
             self.fps_display.update()
+            self.fps_display.blit_self()
 
     def _draw_game(self):
         """
@@ -109,8 +119,6 @@ class AlienInvasion:
 
         # Overlays
         self.scoreboard.blit_self()
-        if self.vars.show_fps:
-            self.fps_display.blit_self()
 
     def _bullet_alien_collide(self):
         """
@@ -134,7 +142,7 @@ class AlienInvasion:
 
     def quit_game(self):
         """save data as needed and close the game"""
-        self.scoreboard.leaderboard.update_leaderboard()
+        self.scoreboard.leaderboard.update_high_scores()
         sys.exit()
 
 
@@ -163,6 +171,8 @@ class InputManager:
                     self.game.quit_game()
                 elif event.key == self.vars.key_menu:
                     self.game.toggle_menu()
+                elif event.key == self.vars.key_toggle_debug:
+                    self.game.debug = False if self.game.debug else True
 
             # update the mouse
             self.mouse_pos = pg.mouse.get_pos()

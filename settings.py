@@ -22,15 +22,17 @@ class Vars:
 
         # Universal color settings
         self.black_rgb = 0, 0, 0
+        self.white_rgb = 255, 255, 255
         self.grey_rgb = 89, 89, 89
         self.yellow_rgb = 255, 255, 0
         self.green_rgb = 0, 255, 0
+        self.olive_rgb = 62, 119, 53
         self.light_blue_rgb = 51, 204, 255
 
         # Menu Settings
         self.menu_bg_rgb = self.black_rgb
         self.menu_font = Font(join('fonts/', 'arcade.ttf'), 35)
-        self.menu_font_rgb = self.black_rgb
+        self.menu_font_rgb = self.yellow_rgb
 
         # Control settings
         self.key_move_r = pg.K_d
@@ -38,6 +40,7 @@ class Vars:
         self.key_shoot = pg.K_SPACE
         self.key_quit = pg.K_q
         self.key_menu = pg.K_ESCAPE
+        self.key_toggle_debug = pg.K_F1
 
         # Ship settings
         self.ship_scale = 0.11
@@ -45,15 +48,15 @@ class Vars:
 
         # Bullet settings
         self.bullet_speed = 0.80 * self.window_h  # pixels-per-second
-        self.max_bullets = 3
-        self.bullets_persist = True
-        self.bullet_w = 0.09 * self.window_w  # 0.003 * self.window_w
+        self.max_bullets = 2
+        self.bullets_persist = False
+        self.bullet_w = 0.003 * self.window_w
         self.bullet_h = 0.028 * self.window_h
         self.bullet_color = self.light_blue_rgb
 
         # Alien settings
         self.fleet_columns = 5
-        self.fleet_rows = 2
+        self.fleet_rows = 5
         self.alien_scale = .060  # percent of screen height
         self.alien_vel_x = 0.21 * self.window_w
         self.fleet_drop_height = 0.05 * self.window_h
@@ -66,7 +69,6 @@ class Vars:
 
         # Scoreboard
         self.scoreboard_font_rgba = Color(*self.yellow_rgb, 100)
-        self.scoreboard_rgba = Color(*self.green_rgb, 50)
 
         # Asteroid settings
         self.num_asteroids = 2

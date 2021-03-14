@@ -19,7 +19,7 @@ class Scoreboard:
         self.height = game.rect.h * .08
         self.font = pg.font.Font(join('fonts/', 'arcade.ttf'), 30)
         self.font_color = game.vars.scoreboard_font_rgba
-        self.board_color = game.vars.scoreboard_rgba
+        self.board_rgba = *game.vars.olive_rgb, 128
 
         # Important points for blitting onto the scoreboard
         self.centery = self.height // 2
@@ -65,7 +65,7 @@ class Scoreboard:
         )
         # draw rounded rectangle background
         pg.draw.rect(
-            surf, self.board_color, pg.Rect(0, 0, *rect.size),
+            surf, self.board_rgba, pg.Rect(0, 0, *rect.size),
             border_radius=25
         )
 
@@ -126,9 +126,12 @@ class FpsDisplay:
         self.game.screen.blit(self.image, self.rect)
 
     def _get_font_surface(self):
-        current_fps = self.game.clock.get_fps()
+        """
+        Get the current FPS and render it as a font render surface, return
+        the surface and it's rect
+        """
         font_surface = self.font.render(
-            f"FPS  {int(current_fps)}", True, self.font_rgb
+            f"FPS  {int(self.game.clock.get_fps())}", True, self.font_rgb
         ).convert_alpha()
         rect = font_surface.get_rect()
         return font_surface, rect

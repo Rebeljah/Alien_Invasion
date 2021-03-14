@@ -16,7 +16,7 @@ class LeaderBoard(dict):
         super().__init__()
         self.game = game
 
-        # todo
+        # todo add ability to enter initials into the menu module
         self.player_initials = '---'
 
         # load leaderboard dictionary from JSON
@@ -29,7 +29,7 @@ class LeaderBoard(dict):
         except ValueError:  # dict has no keys
             self.high_score = 0
 
-    def update_leaderboard(self):
+    def update_high_scores(self):
         """
         If the current player score is greater than the minimum score
         on the leaderboard, add the player score onto the leaderboard.

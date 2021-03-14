@@ -134,8 +134,7 @@ class Asteroid(Sprite):
             self._randomize_asteroid()
             self._teleport_asteroid()
 
-            # todo
-            # self._adjust_brightness()
+            self._adjust_brightness()
 
     def _randomize_asteroid(self):
         """Randomly change the asteroid's velocity and rotation and image"""
@@ -194,4 +193,4 @@ class Asteroid(Sprite):
         shade the asteroid based on its size to create an effect of depth
         to screen.
         """
-        print('adjust brightness')
+        pass
