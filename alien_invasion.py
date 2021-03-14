@@ -1,97 +1,124 @@
-import sys
 import pygame as pg
-# import random as r
+import sys
 
 import settings
+from menu import MenuManager
+from overlays import Scoreboard, FpsDisplay
+from visual_fx import AsteroidGroup
 from ship import Ship
 from alien import AlienFleet
-from visual_fx import AsteroidGroup, FpsDisplay
 
 
 class AlienInvasion:
-    """overall class to manage game assets and behavior"""
+    """overall class to manage game assets and behavior, thanks to Python Crash
+    Course for the wonderful explanation of the main game loop"""
 
     def __init__(self):
         """initialize the game, and create game resources"""
         pg.init()
         self.vars = settings.Vars()
         self.clock = pg.time.Clock()
-        self.is_running = True
+        self.dt = 0
+        self.debug = False
+        self.state = 'menu'  # 'game'
+        self.first_frame = True
 
         # create the screen and get its rect
         self.screen = pg.display.set_mode(
-            (self.vars.window_w, self.vars.window_h)
+            (self.vars.window_w, self.vars.window_h),
+            flags=pg.HWSURFACE
         )
         self.rect = self.screen.get_rect()
 
         pg.display.set_caption("Space Knockoffs!")
-        pg.display.set_icon(pg.image.load('images/asteroid.bmp'))
 
         # set the background
         bg_surface = pg.image.load('images/bg.bmp').convert()
         self.bg = pg.transform.scale(bg_surface, self.rect.size)
-
+        # Initialize objects
+        self.input_manager = InputManager(self)
+        self.menu = MenuManager(self)
+        self.scoreboard = Scoreboard(self)
         self.fps_display = FpsDisplay(self)
         self.ship = Ship(self)
         self.alien_fleet = AlienFleet(self)
-        self.asteroids = AsteroidGroup(self, self.vars.num_asteroids)
+        self.asteroids = AsteroidGroup(self)
 
     def run_game(self):
         """Main loop for checking events and updating objects.
         once everything is updated, the _update_screen method is called."""
-        is_first_frame = True
+
         while True:
             # tick game clock, set max frame rate, get delta time in seconds
-            dt = self.clock.tick(self.vars.max_fps) / 1000.0
-            # limit dt to prevent items from teleporting on loss of frames
-            if dt > 0.2:
-                dt = 0.2
+            self.dt = self.clock.tick(self.vars.max_fps) / 1000.0
+            if self.dt > 0.10:
+                self.dt = 0.10
 
-            if self.vars.show_fps:
-                self.fps_display.update()
+            self.input_manager.check_events()
 
-            self._check_events()
-            if self.is_running or is_first_frame:
-                is_first_frame = False
-                self.asteroids.update(dt)
-                self.alien_fleet.update(dt)
-                self.ship.update(dt)
-                self.ship.bullets.update(dt)
-                self._bullet_alien_collide()
+            if self.state == 'game' or self.first_frame:
+                self.first_frame = False
+                self._update_game(self.dt)
 
-            self._update_screen()
+            elif self.state == 'menu':
+                self.menu.update_menu()
 
-    def _check_events(self):
-        """Listen for events from the event queue"""
+            self._draw_screen()
 
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                sys.exit()
-            elif event.type == pg.KEYDOWN:
-                self._check_keydown_event(event)
-            elif event.type == pg.KEYUP:
-                self._check_keyup_event(event)
+            pg.display.flip()
 
-    def _check_keydown_event(self, event):
-        """respond to key presses"""
-        if event.key == self.vars.key_quit:
-            sys.exit()
+    def _update_game(self, dt):
+        """
+        Updates the objects that are active while the game is playing. These
+        objects all stop updating when the menu is open
+        """
+        # FX
+        self.asteroids.update(dt)
+        # Alien fleet
+        self.alien_fleet.update(dt)
+        # Player ship
+        self.ship.update(dt)
+        self.ship.bullets.update(dt)
+        self._bullet_alien_collide()
+        # Overlays
+        self.scoreboard.update()
 
-        if self.is_running:
-            if event.key == self.vars.key_r:
-                self.ship.moving_right = True
-            elif event.key == self.vars.key_l:
-                self.ship.moving_left = True
-            elif event.key == self.vars.key_shoot:
-                self.ship.fire_bullet()
+    def _draw_screen(self):
+        """
+        Handle drawing of all objects to the screen. The menu is only drawn
+        if in menu mode
+        """
 
-    def _check_keyup_event(self, event):
-        """respond to key releases"""
-        if self.is_running:
-            if event.key == self.vars.key_r:
-                self.ship.moving_right = False
-            elif event.key == self.vars.key_l:
-                self.ship.moving_left = False
+        self._draw_game()
+
+        if self.state == 'menu':
+            self.menu.draw_menu()
+
+        if self.vars.show_fps:
+            self.fps_display.update()
+            self.fps_display.blit_self()
+
+    def _draw_game(self):
+        """
+        blit game surfaces onto the screen. These are always blitted. If the
+        menu is open, the game elements will be blitted underneath of the menu.
+        """
+
+        self.screen.blit(self.bg, (0, 0))
+
+        # FX
+        self.asteroids.draw(self.screen)
+
+        # Player ship
+        for bullet in self.ship.bullets:
+            bullet.draw_bullet()
+        self.ship.blit_self()
+
+        # Alien fleet
+        self.alien_fleet.draw(self.screen)
+
+        # Overlays
+        self.scoreboard.blit_self()
 
     def _bullet_alien_collide(self):
         """
@@ -102,29 +129,82 @@ class AlienInvasion:
                                             False, False)
         for alien_list in collisions.values():
             for alien in alien_list:
+                self.scoreboard.player_score += alien.point_value
                 alien.blow_up()
 
         if not self.vars.bullets_persist:
             for bullet in collisions.keys():
                 bullet.remove_self()
 
-    def _update_screen(self):
-        """redraw the screen after each loop"""
+    def toggle_menu(self):
+        """Switch state to 'menu' if in 'game' and visa versa"""
+        self.state = 'game' if self.state == 'menu' else 'menu'
 
-        self.screen.blit(self.bg, (0, 0))
+    def quit_game(self):
+        """save data as needed and close the game"""
+        self.scoreboard.leaderboard.update_high_scores()
+        sys.exit()
 
-        self.asteroids.draw(self.screen)
 
-        for bullet in self.ship.bullets:
-            bullet.draw_bullet()
-        self.ship.blit_self()
+class InputManager:
+    def __init__(self, game):
+        self.game = game
+        self.vars = game.vars
 
-        self.alien_fleet.draw(self.screen)
+        # these are updated while the game is in the menu state
+        self.mouse_pos = 0, 0
+        self.is_clicking = False
 
-        if self.vars.show_fps:
-            self.fps_display.blit_self()
+    def check_events(self):
+        """
+        First determine if the user has quit the game, then check events
+        for the game or menu depending on the current game state
+        """
+        for event in pg.event.get():
 
-        pg.display.flip()
+            # check for user quit via the x button
+            if event.type == pg.QUIT:
+                self.game.quit_game()
+            # check for user quit or menu toggle
+            elif event.type == pg.KEYDOWN:
+                if event.key == self.vars.key_quit:
+                    self.game.quit_game()
+                elif event.key == self.vars.key_menu:
+                    self.game.toggle_menu()
+                elif event.key == self.vars.key_toggle_debug:
+                    self.game.debug = False if self.game.debug else True
+
+            # update the mouse
+            self.mouse_pos = pg.mouse.get_pos()
+            if event.type == pg.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    self.is_clicking = True
+
+            elif event.type == pg.MOUSEBUTTONUP:
+                if event.button == 1:
+                    self.is_clicking = False
+
+            # check game events if in game
+            if self.game.state == 'game':
+                self._check_game_events(event)
+
+    def _check_game_events(self, event):
+        """Handle events that occur while the game in playing"""
+        if event.type == pg.KEYDOWN:
+            # ship controls
+            if event.key == self.vars.key_move_l:
+                self.game.ship.moving_left = True
+            elif event.key == self.vars.key_move_r:
+                self.game.ship.moving_right = True
+            elif event.key == self.vars.key_shoot:
+                self.game.ship.fire_bullet()
+
+        elif event.type == pg.KEYUP:
+            # ship controls
+            if event.key == self.vars.key_move_l:
+                self.game.ship.moving_left = False
+            elif event.key == self.vars.key_move_r:
+                self.game.ship.moving_right = False
 
 
 if __name__ == '__main__':

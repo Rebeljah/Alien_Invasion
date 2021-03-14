@@ -1,54 +1,77 @@
 """A module to hold the settings for the Alien Invasion game"""
 import pygame as pg
+from pygame.color import Color
+from pygame.font import Font
+from os.path import join
 
 
 class Vars:
     def __init__(self):
-        """initialize the game's settings"""
+        """initialize the game's settings. The idea to use a settings class
+        comes from Python Crash Course"""
 
-        # get user's display size
-        self.display_info = pg.display.Info()
-        display_w = self.display_info.current_w
-        display_h = self.display_info.current_h
+        # Get user's display size
+        display_info = pg.display.Info()
+        display_w = display_info.current_w
+        display_h = display_info.current_h
 
-        # screen settings
+        # Screen settings
         self.max_fps = 144
         self.window_w = int(.75 * display_w)
         self.window_h = int(.90 * display_h)
 
+        # Universal color settings
+        self.black_rgb = 0, 0, 0
+        self.white_rgb = 255, 255, 255
+        self.grey_rgb = 89, 89, 89
+        self.yellow_rgb = 255, 255, 0
+        self.green_rgb = 0, 255, 0
+        self.olive_rgb = 62, 119, 53
+        self.light_blue_rgb = 51, 204, 255
+
+        # Menu Settings
+        self.menu_bg_rgb = self.black_rgb
+        self.menu_font = Font(join('fonts/', 'arcade.ttf'), 35)
+        self.menu_font_rgb = self.yellow_rgb
+
+        # Control settings
+        self.key_move_r = pg.K_d
+        self.key_move_l = pg.K_a
+        self.key_shoot = pg.K_SPACE
+        self.key_quit = pg.K_q
+        self.key_menu = pg.K_ESCAPE
+        self.key_toggle_debug = pg.K_F1
+
+        # Ship settings
+        self.ship_scale = 0.11
+        self.ship_speed = 0.50 * self.window_w  # pixels-per-second
+
+        # Bullet settings
+        self.bullet_speed = 0.80 * self.window_h  # pixels-per-second
+        self.max_bullets = 2
+        self.bullets_persist = False
+        self.bullet_w = 0.003 * self.window_w
+        self.bullet_h = 0.028 * self.window_h
+        self.bullet_color = self.light_blue_rgb
+
+        # Alien settings
+        self.fleet_columns = 5
+        self.fleet_rows = 5
+        self.alien_scale = .060  # percent of screen height
+        self.alien_vel_x = 0.21 * self.window_w
+        self.fleet_drop_height = 0.05 * self.window_h
+
         # FPS display
         self.show_fps = True
         self.fps_refresh_rate = 3  # measured in... FPS
-        self.fps_font = 'fonts/arcade.ttf'
-        self.fps_size = 22
+        self.fps_font = Font(join('fonts/', 'arcade.ttf'), 22)
+        self.fps_font_rgb = self.yellow_rgb
 
-        # control settings
-        self.key_r = pg.K_d
-        self.key_l = pg.K_a
-        self.key_shoot = pg.K_SPACE
-        self.key_quit = pg.K_q
+        # Scoreboard
+        self.scoreboard_font_rgba = Color(*self.yellow_rgb, 100)
 
-        # Alien settings
-        self.fleet_columns = 7
-        self.fleet_rows = 8
-        self.alien_scale = .060  # percent of screen height
-        self.alien_vel_x = 0.19 * self.window_w
-        self.fleet_drop_height = 0.07 * self.window_h
-
-        # ship settings
-        self.ship_scale = 0.11
-        self.ship_speed = 0.65 * self.window_w  # pixels-per-second
-
-        # bullet settings
-        self.bullet_speed = 0.90 * self.window_h  # pixels-per-second
-        self.max_bullets = 3
-        self.bullets_persist = False
-        self.bullet_w = 0.003 * self.window_w
-        self.bullet_h = 0.03 * self.window_h
-        self.bullet_color = (51, 204, 255)  # light blue
-
-        # asteroid settings
-        self.num_asteroids = 3
+        # Asteroid settings
+        self.num_asteroids = 2
         self.asteroid_scale = 0.14
         self.asteroid_rps = 45  # degrees-per-second
         self.asteroid_velocity = .08 * self.window_w  # pixels-per-second
@@ -57,7 +80,8 @@ class Vars:
 def scale(child_surface, comparison_surface, ratio):
     """
     Scale a surface based on a percentage of the height of a comparison
-    surface. Preserves aspect ratio of the child.
+    surface. Preserves aspect ratio of the child. Returns the scaled surface and
+    its rectangle
     """
 
     child_rect = child_surface.get_rect()

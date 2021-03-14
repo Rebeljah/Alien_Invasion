@@ -1,46 +1,77 @@
 import pygame as pg
-from pygame.sprite import Sprite
+from pygame.sprite import Sprite, Group
 import random as rand
+import os
 
 from settings import scale
 
 
-class AsteroidGroup(pg.sprite.Group):
+class AsteroidGroup(Group):
     """A group class for creating and managing asteroids"""
-    def __init__(self, game, num_asteroids):
+    def __init__(self, game):
         super().__init__()
+        self.game = game
 
-        image = pg.image.load('images/asteroid.bmp').convert_alpha()
-        image, rect = scale(
-            image, game.screen, game.vars.asteroid_scale
-        )
+        self.image_pool = []
+        self.image_folder = os.path.join('images/', 'asteroids/')
+        self._load_images()
+
+        self.num_asteroids = game.vars.num_asteroids
+        self._build_self()
+
+    def _load_images(self):
+        """
+        Load then scale each image in the asteroid image folder into the
+        group's image list as a tuple containing the surface and rect of each
+        image.
+        """
+        self.image_pool: list = [
+            pg.image.load(self.image_folder + file_name).convert_alpha()
+            for file_name in os.listdir(self.image_folder)
+        ]
+        # scale each loaded surface and also return a rect for each surface
+        # asteroid_images = [(Surface, Rect), ...]
+        for i, image in enumerate(self.image_pool):
+            self.image_pool[i]: tuple = scale(
+                image, self.game.screen, self.game.vars.asteroid_scale
+            )
+
+    def get_random_image(self) -> tuple:
+        """Return the surface and rectangle of a random asteroid image"""
+        return rand.choice(self.image_pool)
+
+    def _build_self(self):
+        """
+        Initialize and add each asteroid to the group using a random image for
+        each asteroid.
+        """
         self.add(*[
-            Asteroid(game, image, rect) for _ in range(num_asteroids)
+            Asteroid(self)
+            for _ in range(self.num_asteroids)
         ])
 
 
 class Asteroid(Sprite):
     """
-    An asteroid that randomly changes location size and shape. Gives the
-    appearance of mutiple asteroids entering and exiting the screen
+    An asteroid that randomly changes location image, size, and velocity.
+    Gives the appearance of multiple asteroids entering and exiting the screen
     """
-    def __init__(self, game, image, rect):
+    def __init__(self, fleet):
         super().__init__()
         # get game info
-        self.game = game
-        self.vars = game.vars
+        self.fleet = fleet
+        self.game = fleet.game
+        self.vars = fleet.game.vars
+
         # default x and y velocity
         self.vel_x = self.vel_y = self.base_vel = self.vars.asteroid_velocity
 
-        # load image and rect
-        self.image = image
-        self.rect = rect
-        self.rect.center = self._random_location(3)
+        self.image, self.rect = self.fleet.get_random_image()
+        self.rect.center = self._random_location()
 
         # rotation info
         self.degree = 0.0
-        self.base_rotation_vel = self.vars.asteroid_rps
-        self.rotation_vel = self.base_rotation_vel
+        self.rotation_vel = self.base_rotation_vel = self.vars.asteroid_rps
         # applied each time rotozoom is called in _spin()
         self.scale = 1
         # used for resetting image between rotations in _spin()
@@ -70,82 +101,85 @@ class Asteroid(Sprite):
         rotations. Rotozoom is used here as well to size the asteroid to it's
         current scale.
         """
+        # increment spin
         self.degree += self.rotation_vel * dt
-        # reset the angle after 360 degrees to save memory
-        if -360 < self.degree < 360:
-            self.image = pg.transform.rotozoom(
-                self.base_img, self.degree, self.scale
-            )
-            self.rect = self.image.get_rect(center=self.rect.center)
-        else:
-            self.degree = 0
 
-    def _check_screen_exit(self):
+        self.image = pg.transform.rotozoom(
+            self.base_img, self.degree, self.scale
+        )
+        # preserve the center of the rectangle to produce smooth movement.
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+    def _check_screen_exit(self) -> None:
         """
         When the asteroid leaves the screen, randomly amplify it's velocities,
         randomly amplify it's size, move it to another part of the screen.
         """
-        def randomize():
-            self._randomize_asteroid()
-            self._teleport_asteroid()
+
+        # return None if the asteroid is still in the screen
+        if self.rect.colliderect(self.game.rect):
+            return None
 
         screen_w = self.game.rect.width
         screen_h = self.game.rect.height
 
-        # check left / right exit
-        if self.rect.right < 0 and self.vel_x < 0:
-            randomize()
-        elif self.rect.left > screen_w and self.vel_x > 0:
-            randomize()
+        # check that the asteroid is actually heading away from the screen
+        if any([
+            self.rect.right < 0 and self.vel_x < 0,
+            self.rect.left > screen_w and self.vel_x > 0,
+            self.rect.bottom < 0 and self.vel_y < 0,
+            self.rect.top > screen_h and self.vel_y > 0
+        ]):
+            self.degree = 0
+            self._randomize_asteroid()
+            self._teleport_asteroid()
 
-        # check top / bottom exit
-        elif self.rect.bottom < 0 and self.vel_y < 0:
-            randomize()
-        elif self.rect.top > screen_h and self.vel_y > 0:
-            randomize()
+            self._adjust_brightness()
 
     def _randomize_asteroid(self):
-        """Randomly change the asteroid's velocity and rotation."""
-        def randomize(vel, amplitude=1.2):
-            return vel * rand.choice([1, -1]) * rand.uniform(.5, 2) * amplitude
-
+        """Randomly change the asteroid's velocity and rotation and image"""
+        def randomize(vel):
+            return vel * rand.choice([1, -1]) * rand.uniform(.5, 2)
+        # randomly choose an image
+        self.base_img, self.rect = self.fleet.get_random_image()
+        # randomize size
+        self.scale = rand.uniform(.25, 1.25)
+        # randomize velocities
         self.vel_x = randomize(self.base_vel)
         self.vel_y = randomize(self.base_vel)
-        # randomize the direction / speed of rotation
         self.rotation_vel = randomize(self.base_rotation_vel)
-        # randomize rotozoom scale
-        self.scale = rand.uniform(.25, 1.25)
 
     def _teleport_asteroid(self):
         """
         Move the asteroid to a random location outside of the screen and
         make sure it is going in the right direction (towards the visible area)
         """
-        # move the rect off-screen, then update float center positions
-        self.rect.center = self._random_location(3)
+        # move the rect off-screen, then update accurate position
+        self.rect.center = self._random_location()
         self.centerx, self.centery = map(float, self.rect.center)
 
         # invert velocity as needed to make the asteroid move into the screen
-        if self.rect.bottom < 0 and self.vel_y < 0:
-            self.vel_y *= -1
-        elif self.rect.top > self.game.rect.bottom and self.vel_y > 0:
-            self.vel_y *= -1
-        if self.rect.right < 0 and self.vel_x < 0:
-            self.vel_x *= -1
-        elif self.rect.left > self.game.rect.right and self.vel_x > 0:
+        if any([self.rect.bottom < 0 and self.vel_y < 0,
+                self.rect.top > self.game.rect.bottom and self.vel_y > 0
+                ]):
             self.vel_x *= -1
 
-    def _random_location(self, travel_time=2):
+        if any([self.rect.right < 0 and self.vel_x < 0,
+                self.rect.left > self.game.rect.right and self.vel_x > 0
+                ]):
+            self.vel_y *= -1
+
+    def _random_location(self, reentry_time=1.0):
         """
         Returns a random coordinate position outside of the visible
         screen.
 
-        travel_time: [int, float] -  Seconds it will take for the asteroid to
+        reentry_time: [int, float] -  Seconds it will take for the asteroid to
                      re-enter visible area.
         """
         g_rect = self.game.rect
-        # distance away from visible part of display in seconds
-        dist = travel_time * abs(self.vel_x)
+        # approximate distance away from visible part of display in seconds
+        dist = reentry_time * abs(self.vel_x)
 
         return rand.choice(
             ((-dist, -dist), (g_rect.centerx, -dist), (g_rect.w+dist, -dist),
@@ -153,37 +187,10 @@ class Asteroid(Sprite):
              (g_rect.centerx, g_rect.h+dist), (g_rect.w+dist, g_rect.h+dist))
         )
 
-
-class FpsDisplay:
-    """Class to represent a dynamic FPS counter that can be blitted to the
-    screen"""
-    def __init__(self, game):
-        self.game = game
-
-        self.font = pg.font.Font(game.vars.fps_font, game.vars.fps_size)
-        self.color = (5, 255, 30)
-
-        self.image, self.rect = self._get_font_surface()
-        # used for self frame-rate limiting
-        self.target_fps = game.vars.fps_refresh_rate  # FPS
-        self.target_idle = 1000 / self.target_fps  # time is MS to wait
-        self.idle_time = 0
-
-    def update(self):
-        """Update the Surface with the current FPS"""
-        if self.idle_time < self.target_idle:  # milliseconds
-            self.idle_time += self.game.clock.get_time()
-        else:
-            self.image, self.rect = self._get_font_surface()
-            self.idle_time = 0
-
-    def _get_font_surface(self):
-        current_fps = self.game.clock.get_fps()
-        font_surface = self.font.render(
-            f"FPS  {int(current_fps)}", True, self.color
-        )
-        rect = font_surface.get_rect()
-        return font_surface, rect
-
-    def blit_self(self):
-        self.game.screen.blit(self.image, self.rect)
+    # todo
+    def _adjust_brightness(self):
+        """
+        shade the asteroid based on its size to create an effect of depth
+        to screen.
+        """
+        pass

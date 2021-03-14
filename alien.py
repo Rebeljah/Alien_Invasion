@@ -1,6 +1,6 @@
 import pygame as pg
-from pygame.sprite import Sprite
 import random
+import os
 
 from settings import scale
 
@@ -14,49 +14,84 @@ class AlienFleet(pg.sprite.Group):
         usable width and a given usable height. The fleet will be positioned
         in a grid that roughly fills the given usable area.
         """
+        self.game = game
+
         # information used to space the fleet
         usable_w = game.rect.width
         usable_h = .55 * game.rect.height
         self.num_columns = game.vars.fleet_columns
         self.num_rows = game.vars.fleet_rows
         # space between each alien's starting x, y)
-        hoz_spacing = usable_w / self.num_columns
-        vert_spacing = usable_h / self.num_rows
+        self.hoz_spacing = usable_w / self.num_columns
+        self.vert_spacing = usable_h / self.num_rows
 
-        # build the fleet
+        # load possible ship surfaces
+        self.image_pool = []
+        self.image_folder = os.path.join('images/', 'alien_ships/')
+        self._load_image_pool()
+
+        self._build_new_fleet()
+
+    def _load_image_pool(self):
+        """
+        Load each image from the alien ship image folder into the group's
+        image pool list so that each image can be randomly assigned to new
+        Alien instances being put into the fleet.
+        """
+        self.image_pool = [
+            pg.image.load(self.image_folder + file_name).convert_alpha()
+            for file_name in os.listdir(self.image_folder)
+        ]
+
+    def _build_new_fleet(self):
+        """
+        Create an evenly spaced 'fleet' of alien objects by multiplying
+        the aliens row/column position by a pre-determiend vertical and
+        horizontal spacing
+        """
+        def random_image(): return random.choice(self.image_pool)
+
         for row in range(self.num_rows):
-            # create a row of aliens
-            row_of_aliens = \
-                [self.Alien(game) for col in range(self.num_columns)]
-
+            row_of_aliens = [
+                self.Alien(self.game, random_image())
+                for col in range(self.num_columns)
+            ]
             # move each alien in the row to it's correct x,y position
             for column, alien in enumerate(row_of_aliens, start=0):
-                alien.x += column * hoz_spacing
-                alien.y += row * vert_spacing
+                alien.x += column * self.hoz_spacing
+                alien.y += row * self.vert_spacing
 
             self.add(*row_of_aliens)
 
-    def update_fleet(self, dt):
-        pass
+    def update(self, dt):
+        """Perform actions to the group as a whole. Overrides super method"""
+        # add a new fleet immediately after the old one in destroyed
+        if len(self) == 0:
+            self._build_new_fleet()
 
-    class Alien(Sprite):
-        def __init__(self, game):
+        for alien in self.sprites():
+            alien.update(dt)
+
+    class Alien(pg.sprite.Sprite):
+        def __init__(self, game, image):
             super().__init__()
             """
-            Represents an enemy ship that is part of a larger group (fleet) of aliens.
+            Represents an enemy ship that is part of a larger group (fleet) of
+            aliens.
             """
             # get access to attributes of the main game class
             self.game = game
 
             # Load a random alien image and get the surface and rect
-            image = pg.image.load(
-                random.choice(['images/alien1.bmp', 'images/alien2.bmp'])
-            ).convert_alpha()
+            self.image = image
+
             self.image, self.rect = scale(image, self.game.screen,
                                           self.game.vars.alien_scale)
 
+            self.point_value = 10
+
             # Used to keep accurate count of current pixel location
-            self.x, self.y = (0.0, 0.0)
+            self.x = self.y = 0.0
             # velocity
             self.vel_x = self.game.vars.alien_vel_x
             self.drop_height = self.game.vars.fleet_drop_height
@@ -67,28 +102,35 @@ class AlienFleet(pg.sprite.Group):
             move down one level.
             -Aliens that hit the player or the floor both have different behaviors.
             """
-            # left / right
+            rect = self.rect
+            g_rect = self.game.rect
+
+            # move on the x-axis
             self.x += self.vel_x * dt
 
-            # reverse and move down on wall collision
+            # player collision
+            if self.rect.colliderect(self.game.ship.rect):
+                self._hit_player_ship()
+            # floor collision
+            if rect.bottom > g_rect.bottom:
+                self._hit_bottom()
+            
+            # screen edge collisions
             def moving_left(): return self.vel_x < 0
             def moving_right(): return self.vel_x > 0
-            def colliding_left(): return self.rect.left < 0
-            def colliding_right(): return self.rect.right > self.game.rect.right
-
-            if (colliding_left() and moving_left() or
-                    colliding_right() and moving_right()):
+            def colliding_left(): return rect.left < 0
+            def colliding_right(): return rect.right > g_rect.w
+            # reverse and move down on wall collision
+            if colliding_left() and moving_left():
+                rect.left = g_rect.left
+                self.vel_x *= -1
+                self.y += self.drop_height
+            elif colliding_right() and moving_right():
+                rect.right = g_rect.right
                 self.vel_x *= -1
                 self.y += self.drop_height
 
-            self.rect.topleft = (self.x, self.y)
-
-            # check if has alien has hit the floor
-            if self.rect.bottom >= self.game.rect.bottom:
-                self._hit_bottom()
-            # check if alien has hit the player
-            elif self.rect.colliderect(self.game.ship.rect):
-                self._hit_player_ship()
+            rect.topleft = (self.x, self.y)
 
         def _hit_bottom(self):
             """ Do a series of actions when the alien reaches the bottom"""
