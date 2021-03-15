@@ -92,7 +92,7 @@ class AlienInvasion:
         self._draw_game()
 
         if self.state == 'menu':
-            self.menu.draw_menu()
+            self.menu.blit_menu()
 
         if self.vars.show_fps:
             self.fps_display.update()

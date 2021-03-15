@@ -17,8 +17,8 @@ class Vars:
 
         # Screen settings
         self.max_fps = 144
-        self.window_w = int(.75 * display_w)
-        self.window_h = int(.90 * display_h)
+        self.window_w = int(.70 * display_w)
+        self.window_h = int(.85 * display_h)
 
         # Universal color settings
         self.black_rgb = 0, 0, 0
@@ -30,9 +30,7 @@ class Vars:
         self.light_blue_rgb = 51, 204, 255
 
         # Menu Settings
-        self.menu_bg_rgb = self.black_rgb
         self.menu_font = Font(join('fonts/', 'arcade.ttf'), 35)
-        self.menu_font_rgb = self.yellow_rgb
 
         # Control settings
         self.key_move_r = pg.K_d
