@@ -13,6 +13,9 @@ class Bullet(Sprite):
         self.game = game
         self.ship = game.ship
 
+        self.kills = 0
+        self.max_kills = self.game.vars.bullet_max_kills
+
         self.width = self.game.vars.bullet_w
         self.height = self.game.vars.bullet_h
         self.color = pg.Color(self.game.vars.bullet_color)
@@ -20,6 +23,9 @@ class Bullet(Sprite):
         # create the rectangle for the bullet and set its position
         self.rect = pg.Rect(0, 0, self.width, self.height)
         self.rect.midtop = self.ship.rect.midtop
+
+        # create mask for collision
+        self.mask = pg.mask.Mask(self.rect.size, fill=True)
 
         # store the bullet's y-value so it can move upward accurately
         self.y = float(self.rect.y)

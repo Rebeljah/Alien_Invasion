@@ -17,11 +17,12 @@ class AlienInvasion:
         """initialize the game, and create game resources"""
         pg.init()
         self.vars = settings.Vars()
+
         self.clock = pg.time.Clock()
         self.dt = 0
+
         self.debug = False
-        self.state = 'menu'  # 'game'
-        self.first_frame = True
+        self.state = 'menu'  # or 'game'
 
         # create the screen and get its rect
         self.screen = pg.display.set_mode(
@@ -35,14 +36,16 @@ class AlienInvasion:
         # set the background
         bg_surface = pg.image.load('images/bg.bmp').convert()
         self.bg = pg.transform.scale(bg_surface, self.rect.size)
-        # Initialize objects
+
         self.input_manager = InputManager(self)
-        self.menu = MenuManager(self)
         self.scoreboard = Scoreboard(self)
         self.fps_display = FpsDisplay(self)
         self.ship = Ship(self)
         self.alien_fleet = AlienFleet(self)
         self.asteroids = AsteroidGroup(self)
+        self.menu = MenuManager(self)
+
+        self._update_game(self.dt)
 
     def run_game(self):
         """Main loop for checking events and updating objects.
@@ -51,15 +54,13 @@ class AlienInvasion:
         while True:
             # tick game clock, set max frame rate, get delta time in seconds
             self.dt = self.clock.tick(self.vars.max_fps) / 1000.0
-            if self.dt > 0.10:
+            if self.dt > 0.10: # limit dt in-case of freeze
                 self.dt = 0.10
 
             self.input_manager.check_events()
 
-            if self.state == 'game' or self.first_frame:
-                self.first_frame = False
+            if self.state == 'game':
                 self._update_game(self.dt)
-
             elif self.state == 'menu':
                 self.menu.update_menu()
 
@@ -72,16 +73,14 @@ class AlienInvasion:
         Updates the objects that are active while the game is playing. These
         objects all stop updating when the menu is open
         """
-        # FX
-        self.asteroids.update(dt)
-        # Alien fleet
         self.alien_fleet.update(dt)
         # Player ship
         self.ship.update(dt)
         self.ship.bullets.update(dt)
         self._bullet_alien_collide()
-        # Overlays
+
         self.scoreboard.update()
+        self.asteroids.update(dt)
 
     def _draw_screen(self):
         """
@@ -92,11 +91,11 @@ class AlienInvasion:
         self._draw_game()
 
         if self.state == 'menu':
-            self.menu.blit_menu()
+            self.menu.draw_menu()
 
         if self.vars.show_fps:
             self.fps_display.update()
-            self.fps_display.blit_self()
+            self.fps_display.draw_fps()
 
     def _draw_game(self):
         """
@@ -112,27 +111,27 @@ class AlienInvasion:
         # Player ship
         for bullet in self.ship.bullets:
             bullet.draw_bullet()
-        self.ship.blit_self()
+        self.ship.draw_self()
 
         # Alien fleet
         self.alien_fleet.draw(self.screen)
 
         # Overlays
-        self.scoreboard.blit_self()
+        self.scoreboard.draw_self()
 
     def _bullet_alien_collide(self):
         """
         Collide all the bullet sprites will all the alien sprites, remove the
-        bullet and then blow up the alien
+        bullet and then blow up the alien and add score.
         """
         collisions = pg.sprite.groupcollide(self.ship.bullets, self.alien_fleet,
                                             False, False)
         for alien_list in collisions.values():
             for alien in alien_list:
-                self.scoreboard.player_score += alien.point_value
                 alien.blow_up()
+                self.scoreboard.player_score += alien.point_value
 
-        if not self.vars.bullets_persist:
+        if self.vars.kill_bullets:
             for bullet in collisions.keys():
                 bullet.remove_self()
 

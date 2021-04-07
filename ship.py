@@ -56,6 +56,6 @@ class Ship(Sprite):
         if len(self.bullets) < self.vars.max_bullets:
             self.bullets.add(Bullet(self.game))
 
-    def blit_self(self):
+    def draw_self(self):
         """blit the ship to the screen at its current position"""
         self.game.screen.blit(self.image, self.rect)

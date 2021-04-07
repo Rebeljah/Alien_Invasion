@@ -1,6 +1,6 @@
 import pygame as pg
 import random
-import os
+from os import listdir, path
 
 from settings import scale
 
@@ -26,9 +26,7 @@ class AlienFleet(pg.sprite.Group):
         self.vert_spacing = usable_h / self.num_rows
 
         # load possible ship surfaces
-        self.image_pool = []
-        self.image_folder = os.path.join('images/', 'alien_ships/')
-        self._load_image_pool()
+        self.image_pool: list = self._load_image_pool()
 
         self._build_new_fleet()
 
@@ -38,9 +36,10 @@ class AlienFleet(pg.sprite.Group):
         image pool list so that each image can be randomly assigned to new
         Alien instances being put into the fleet.
         """
-        self.image_pool = [
-            pg.image.load(self.image_folder + file_name).convert_alpha()
-            for file_name in os.listdir(self.image_folder)
+        image_folder = path.join('images/', 'alien_ships/')
+        return [
+            pg.image.load(path.join(image_folder, file_name)).convert_alpha()
+            for file_name in listdir(image_folder)
         ]
 
     def _build_new_fleet(self):
@@ -65,7 +64,7 @@ class AlienFleet(pg.sprite.Group):
 
     def update(self, dt):
         """Perform actions to the group as a whole. Overrides super method"""
-        # add a new fleet immediately after the old one in destroyed
+        # add a new fleet immediately after the old one is destroyed
         if len(self) == 0:
             self._build_new_fleet()
 
@@ -83,10 +82,10 @@ class AlienFleet(pg.sprite.Group):
             self.game = game
 
             # Load a random alien image and get the surface and rect
-            self.image = image
-
             self.image, self.rect = scale(image, self.game.screen,
                                           self.game.vars.alien_scale)
+            # create pixel mask for collision
+            self.mask = pg.mask.from_surface(self.image)
 
             self.point_value = 10
 
@@ -146,6 +145,3 @@ class AlienFleet(pg.sprite.Group):
             """Creates an effect before removing self from group"""
             print('ALIEN SHIP EXPLOSION!')
             self.remove(self.game.alien_fleet)
-
-        def blitme(self):
-            self.game.screen.blit(self.image, self.rect)

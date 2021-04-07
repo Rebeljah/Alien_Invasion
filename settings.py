@@ -47,9 +47,10 @@ class Vars:
         # Bullet settings
         self.bullet_speed = 0.80 * self.window_h  # pixels-per-second
         self.max_bullets = 2
-        self.bullets_persist = False
-        self.bullet_w = 0.003 * self.window_w
-        self.bullet_h = 0.028 * self.window_h
+        self.bullet_max_kills = 1
+        self.kill_bullets = False
+        self.bullet_w = int(0.2 * self.window_w)
+        self.bullet_h = int(0.028 * self.window_h)
         self.bullet_color = self.light_blue_rgb
 
         # Alien settings
@@ -69,7 +70,7 @@ class Vars:
         self.scoreboard_font_rgba = Color(*self.yellow_rgb, 100)
 
         # Asteroid settings
-        self.num_asteroids = 2
+        self.num_asteroids = 30
         self.asteroid_scale = 0.14
         self.asteroid_rps = 45  # degrees-per-second
         self.asteroid_velocity = .08 * self.window_w  # pixels-per-second

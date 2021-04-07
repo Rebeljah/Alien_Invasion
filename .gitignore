@@ -1,5 +1,7 @@
-# pycharm
+# IDE
 .idea/
+.vscode/
+__pycache__/
 
 # tests
 cprofile_test.py

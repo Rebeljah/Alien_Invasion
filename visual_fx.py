@@ -11,6 +11,7 @@ class AsteroidGroup(Group):
     def __init__(self, game):
         super().__init__()
         self.game = game
+        self.vars = game.vars
 
         self.image_pool = []
         self.image_folder = os.path.join('images/', 'asteroids/')
@@ -25,20 +26,16 @@ class AsteroidGroup(Group):
         group's image list as a tuple containing the surface and rect of each
         image.
         """
-        self.image_pool: list = [
-            pg.image.load(self.image_folder + file_name).convert_alpha()
-            for file_name in os.listdir(self.image_folder)
-        ]
-        # scale each loaded surface and also return a rect for each surface
-        # asteroid_images = [(Surface, Rect), ...]
-        for i, image in enumerate(self.image_pool):
-            self.image_pool[i]: tuple = scale(
-                image, self.game.screen, self.game.vars.asteroid_scale
-            )
+        # load images and fill self image pool
+        # [(Surface, Rect), (Surface, Rect), ...]
+        for file_name in os.listdir(self.image_folder):
+            image = pg.image.load(self.image_folder + file_name).convert_alpha()
+            rect = image.get_rect()
+            self.image_pool.append((image, rect))
 
-    def get_random_image(self) -> tuple:
-        """Return the surface and rectangle of a random asteroid image"""
-        return rand.choice(self.image_pool)
+        # given the new surface, scale it to the screen and update image/rect
+        map(lambda img: scale(img[0], self.game.screen, 10),
+            self.image_pool)
 
     def _build_self(self):
         """
@@ -56,18 +53,17 @@ class Asteroid(Sprite):
     An asteroid that randomly changes location image, size, and velocity.
     Gives the appearance of multiple asteroids entering and exiting the screen
     """
-    def __init__(self, fleet):
+    def __init__(self, ast_group):
         super().__init__()
         # get game info
-        self.fleet = fleet
-        self.game = fleet.game
-        self.vars = fleet.game.vars
+        self.ast_group = ast_group
+        self.game = ast_group.game
+        self.vars = ast_group.game.vars
 
         # default x and y velocity
         self.vel_x = self.vel_y = self.base_vel = self.vars.asteroid_velocity
 
-        self.image, self.rect = self.fleet.get_random_image()
-        self.rect.center = self._random_location()
+        self.image, self.rect = rand.choice(self.ast_group.image_pool)
 
         # rotation info
         self.degree = 0.0
@@ -77,7 +73,10 @@ class Asteroid(Sprite):
         # used for resetting image between rotations in _spin()
         self.base_img = self.image
 
-        # track location by float for better accuracy
+        self._randomize_asteroid()
+        self.rect.center = self._random_location()
+
+        # track location by float for more accurate movement
         self.centerx, self.centery = map(float, self.rect.center)
 
     def update(self, dt):
@@ -133,7 +132,6 @@ class Asteroid(Sprite):
             self.degree = 0
             self._randomize_asteroid()
             self._teleport_asteroid()
-
             self._adjust_brightness()
 
     def _randomize_asteroid(self):
@@ -141,9 +139,9 @@ class Asteroid(Sprite):
         def randomize(vel):
             return vel * rand.choice([1, -1]) * rand.uniform(.5, 2)
         # randomly choose an image
-        self.base_img, self.rect = self.fleet.get_random_image()
+        self.base_img, self.rect = rand.choice(self.ast_group.image_pool)
         # randomize size
-        self.scale = rand.uniform(.25, 1.25)
+        self.scale = rand.uniform(.25, 1)
         # randomize velocities
         self.vel_x = randomize(self.base_vel)
         self.vel_y = randomize(self.base_vel)
@@ -162,25 +160,26 @@ class Asteroid(Sprite):
         if any([self.rect.bottom < 0 and self.vel_y < 0,
                 self.rect.top > self.game.rect.bottom and self.vel_y > 0
                 ]):
-            self.vel_x *= -1
+            self.vel_y *= -1
 
         if any([self.rect.right < 0 and self.vel_x < 0,
                 self.rect.left > self.game.rect.right and self.vel_x > 0
                 ]):
-            self.vel_y *= -1
+            self.vel_x *= -1
 
-    def _random_location(self, reentry_time=1.0):
+    def _random_location(self, reentry_time=2.0):
         """
         Returns a random coordinate position outside of the visible
         screen.
 
         reentry_time: [int, float] -  Seconds it will take for the asteroid to
-                     re-enter visible area.
+                     re-enter visible area (approximate).
         """
         g_rect = self.game.rect
         # approximate distance away from visible part of display in seconds
         dist = reentry_time * abs(self.vel_x)
 
+        # coordinates outside of screen
         return rand.choice(
             ((-dist, -dist), (g_rect.centerx, -dist), (g_rect.w+dist, -dist),
              (-dist, g_rect.centery), (-dist, g_rect.h+dist),
@@ -193,4 +192,5 @@ class Asteroid(Sprite):
         shade the asteroid based on its size to create an effect of depth
         to screen.
         """
+        # pixel mask?
         pass

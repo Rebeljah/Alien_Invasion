@@ -1,8 +1,7 @@
 import pygame as pg
 from os.path import join
-
-import leaderboard
-
+import json
+import os
 
 class Scoreboard:
     """Display the current player score and highest leaderboard score at the
@@ -12,7 +11,7 @@ class Scoreboard:
 
         # initialize player score and load leaderboard/highest score
         self.player_score = 0
-        self.leaderboard = leaderboard.LeaderBoard(game)
+        self.leaderboard = self.LeaderBoard(game)
 
         # style info
         self.width = game.rect.w * .25
@@ -46,7 +45,7 @@ class Scoreboard:
             self._render_player_score()
         ])
 
-    def blit_self(self):
+    def draw_self(self):
         """blit scoreboard to the screen"""
         self.game.screen.blit(self.image, self.rect)
 
@@ -68,7 +67,6 @@ class Scoreboard:
             surf, self.board_rgba, pg.Rect(0, 0, *rect.size),
             border_radius=25
         )
-
         return surf, rect
 
     def _render_high_score(self):
@@ -81,7 +79,6 @@ class Scoreboard:
         rect = surf.get_rect(
             center=(self.board_r_centerx, self.centery)
         )
-
         return surf, rect
 
     def _render_player_score(self) -> tuple:
@@ -94,13 +91,97 @@ class Scoreboard:
         rect = surf.get_rect(
             center=(self.board_l_centerx, self.centery)
         )
-
         return surf, rect
+
+    class LeaderBoard(dict):
+        """
+        Provides a leaderboard for tracking high scores as well as the
+        entered username of the person who scored the high score. Also provides
+        a blittable surface that displays the current player score along with
+        the top score from the leaderboard.
+        """
+        def __init__(self, game):
+            super().__init__()
+            self.game = game
+
+            self.max_length = 1
+            # todo add ability to enter initials into the menu module
+            self.player_initials = '---'
+
+            # load leaderboard dictionary from JSON
+            self.save_path = os.path.join('savedata/', 'high_scores.json')
+            self._load()
+
+            # get highest score if there is data in the leaderboard dict
+            try:
+                self.high_score = max(self.keys())
+            except ValueError:  # dict has no keys
+                self.high_score = 0
+
+        def update_high_scores(self):
+            """
+            If the current player score is greater than the minimum score
+            on the leaderboard, add the player score onto the leaderboard.
+            If the leaderboard is longer than a max length, remove the item
+            with the lowest score. sort the leaderboard by descending score
+            """
+            player_score = self.game.scoreboard.player_score
+            lowest_score = min(self.keys())
+
+            # update leaderboard
+            def score_qualifies():
+                return ( len(self) < self.max_length and player_score > 0 ) or player_score > lowest_score
+
+            if score_qualifies():
+                self.update({player_score: self.player_initials})
+
+            # sort self by key (score) in descending order
+            sorted_self = sorted(self.items(), reverse=True)
+            self.clear()
+            self.update(sorted_self)
+
+            # trim lowest scores while max length is exceeded
+            while len(self) > self.max_length:
+                self.popitem()
+
+            self._save()
+
+        def _load(self) -> None:
+            """
+            Load the saved JSON  file and update self dictionary with the
+            name and score key, value pairs from the JSON dictionary. If no
+            saved data is found, create a blank leaderboard JSON file.
+            """
+            try:
+                with open(self.save_path, 'r') as f:
+                    # load JSON converting keys (scores) to ints
+                    self.update(
+                        {int(score): name
+                         for score, name in json.load(f).items()}
+                    )
+            except FileNotFoundError:
+                # create a new leaderboard file using empty self
+                self._save()
+
+        def _save(self) -> None:
+            """
+            Save self leaderboard dictionary to json file. If the save
+            folder is not found, then create the folder and try again.
+            """
+            while True:
+                try:
+                    with open(self.save_path, 'w') as f:
+                        json.dump(self, f, indent=4)
+                        break
+                except FileNotFoundError:  # folder not found, create folder
+                    os.mkdir(os.path.split(self.save_path)[0])
 
 
 class FpsDisplay:
-    """Class to represent a dynamic FPS counter that can be blitted to the
-    screen"""
+    """
+    Class to represent a dynamic FPS counter that can be blitted to the
+    screen
+    """
     def __init__(self, game):
         self.game = game
 
@@ -122,7 +203,7 @@ class FpsDisplay:
             self.idle_time = 0
             self.image, self.rect = self._get_font_surface()
 
-    def blit_self(self):
+    def draw_fps(self):
         self.game.screen.blit(self.image, self.rect)
 
     def _get_font_surface(self):
